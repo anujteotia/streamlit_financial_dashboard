@@ -14,4 +14,4 @@ def fetch_column_as_tuple(csv_file_path, key_column_index=0, value_column_index=
 
 
 # Call the function to read the CSV file and create a tuple
-csv_data = fetch_column_as_tuple('ind_nifty500list.csv', 0, 2)
+csv_data = fetch_column_as_tuple('data/ind_nifty500list.csv', 0, 2)

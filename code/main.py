@@ -28,7 +28,7 @@ class ForecastStockPrice:
         self.stock_mod = None
         st.set_page_config(page_title="Stock Forecasting App", layout="wide")
         st.markdown('<h1 style="text-align: center;">Stock Forecast App</h1>', unsafe_allow_html=True)
-        self.csv_file_path = 'ind_nifty500list.csv'
+        self.csv_file_path = 'data/ind_nifty500list.csv'
         self.date_string = "2015-01-01"
         self.date_format = "%Y-%m-%d"
         self.START = datetime(2015, 1, 1).date()
