@@ -1,9 +1,11 @@
 import io
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from datetime import datetime
 
 import pandas as pd
+import requests
 import streamlit as st
 import yfinance as yf
 from plotly import graph_objs as go
@@ -13,12 +15,17 @@ from prophet.diagnostics import performance_metrics
 from prophet.plot import plot_cross_validation_metric
 from prophet.plot import plot_plotly
 from yahooquery import Ticker
+
 import read_csv_data
-import requests
+
+sys.path.append('recommend')
+
+import recommendations as rec
 
 run_diagnostics = False
 # Page selection options
 page_tabs = ["**Forecast**", "**Recommendation**", "**Latest News**"]
+indices = ['Nifty-500', 'Nasdaq-100', 'AEX']
 
 
 class ForecastStockPrice:
@@ -277,7 +284,7 @@ class ForecastStockPrice:
     def show_recommendations(self):
         stocks = self.get_stocks_from_csv_data()
 
-        with st.spinner("Fetching recommendations..."):
+        with st.spinner("Fetching recommend..."):
             recommendations = self.get_recommendations(stocks)
 
         company_names = list(stocks.keys())[:len(recommendations)]
@@ -300,7 +307,7 @@ class ForecastStockPrice:
                 st.download_button(
                     label="Download Recommendations",
                     data=excel_data,
-                    file_name="recommendations.xlsx",
+                    file_name="recommend.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
             else:
@@ -317,6 +324,21 @@ class ForecastStockPrice:
                 self.diagnostics_data()
         with self.tab2:
             st.title("Recommendation")
+            options = ['No', 'Yes']
+            index = st.selectbox("Provide Index Name", indices)
+            obj = rec.Recommender(index)
+            db_update = st.selectbox("Do you want to Update Database?", options)
+            if db_update == 'Yes':
+                st.spinner("DB update in in progress...")
+                obj.update_db()
+                st.success("Database updated successfully!")
+            elif db_update == 'No':
+                st.subheader("Stock Recommendations")
+                st.spinner(f"Fetching recommendation for {index}...")
+                signals = obj.recommender()
+                df = pd.DataFrame({'Signals': signals})
+                df = df.rename_axis("S.No")
+                st.dataframe(df.style.set_properties(**{'text-align': 'center'}), use_container_width=True)
             st.write("**General Recommendations**")
             self.show_recommendations()
 
