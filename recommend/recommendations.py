@@ -4,6 +4,7 @@ import pymysql
 import ta
 import numpy as np
 import yfinance as yf
+import streamlit as st
 
 pymysql.install_as_MySQLdb()
 
@@ -58,6 +59,7 @@ class Recommender:
         df['SMA200'] = ta.trend.sma_indicator(df.Close, window=200)
         df['Decision RSI/SMA'] = np.where((df.Close > df.SMA200) & (df.RSI < 30), True, False)
 
+    @st.cache_data
     def apply_technicals(self):
         prices = self.get_prices()
         for frame in prices:
@@ -66,6 +68,7 @@ class Recommender:
             self.rsi_sma_decision(frame)
         return prices
 
+    @st.cache_data
     def recommender(self):
         signals = []
         indicators = ['Decision MACD', 'Decision GC', 'Decision RSI/SMA']
@@ -77,16 +80,7 @@ class Recommender:
         return signals
 
 
-# if __name__ == "__main__":
-#     nifty_instance = Recommender('Nifty-500')
-#     aex_instance = Recommender('AEX')
-#     nasdaq_instance = Recommender('Nasdaq-100')
-#
-#     nifty_instance.update_db()
-#     print(nifty_instance.recommender())
-#
-#     aex_instance.update_db()
-#     aex_instance.recommender()
-#
-#     nasdaq_instance.update_db()
-#     nasdaq_instance.recommender()
+if __name__ == "__main__":
+    nifty_instance = Recommender('Nifty-500')
+    nifty_instance.update_db()
+    print(nifty_instance.recommender())
