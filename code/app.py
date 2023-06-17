@@ -134,7 +134,7 @@ class ForecastStockPrice:
         st.plotly_chart(fig, use_container_width=True)
 
     @staticmethod
-    def outlier_data():
+    def outlier_data(ticker):
         lockdowns = pd.DataFrame([
             {'holiday': 'lockdown_1', 'ds': '2020-03-21', 'lower_window': 0, 'ds_upper': '2020-06-06'},
             {'holiday': 'lockdown_2', 'ds': '2020-07-09', 'lower_window': 0, 'ds_upper': '2020-10-27'},
@@ -142,54 +142,21 @@ class ForecastStockPrice:
             {'holiday': 'lockdown_4', 'ds': '2021-05-28', 'lower_window': 0, 'ds_upper': '2021-06-10'},
             {'holiday': 'war_start', 'ds': '2022-02-23', 'lower_window': 0, 'ds_upper': '2022-03-09'},
         ])
+        if 'ADANI' in ticker:
+            lockdown_adani = {'holiday': 'Hindunburg', 'ds': '2023-01-25', 'lower_window': 0, 'ds_upper': '2023-05-22'}
+            new_row = pd.DataFrame([lockdown_adani])
+            lockdowns = pd.concat([lockdowns, new_row], ignore_index=True)
 
         lockdowns[['ds', 'ds_upper']] = lockdowns[['ds', 'ds_upper']].apply(pd.to_datetime)
         lockdowns['upper_window'] = (lockdowns['ds_upper'] - lockdowns['ds']).dt.days
         return lockdowns
 
     @staticmethod
-    def handle_outliers(update_outliers, lockdowns):
-        if update_outliers == 'Yes':
-            add_outliers = st.selectbox("**Choose ADD or REMOVE**", ('Remove', 'Add'), key='outliers')
-
-            if add_outliers == 'Add':
-                start_date1 = st.text_input("Start Date")
-                end_date1 = st.text_input("End Date")
-                outlier_name = st.text_input("Outlier Name")
-
-                if st.button('Add'):
-                    my_dict = {'holiday': outlier_name, 'ds': start_date1, 'ds_upper': end_date1}
-                    new_row = pd.DataFrame([my_dict])
-                    lockdowns = pd.concat([lockdowns, new_row], ignore_index=True)
-                    lockdowns[['ds', 'ds_upper']] = lockdowns[['ds', 'ds_upper']].apply(pd.to_datetime)
-                    lockdowns['upper_window'] = (lockdowns['ds_upper'] - lockdowns['ds']).dt.days
-                    st.success("Data added successfully!")
-
-            elif add_outliers == 'Remove':
-                options1 = list(range(0, len(lockdowns)))
-                row_num = st.selectbox("Which row you want to delete?", options1, index=options1[-1])
-
-                if st.button('Remove'):
-                    lockdowns = lockdowns.drop(row_num)
-                    st.success("Data removed successfully")
-
-            st.write("**Current Outliers Data**")
-            st.table(lockdowns)
-        else:
-            pass
-
-        return lockdowns
-
-    @staticmethod
-    def get_data_to_predict_future(historical_data):
-        lockdowns = ForecastStockPrice.outlier_data()
-        st.subheader("Do you want to update outlier data?")
-        characters = string.ascii_letters + string.digits + string.punctuation
-        random_string = ''.join(random.choice(characters) for _ in range(10))
-        update_outliers = st.selectbox("**Do you want to update Outliers**", ('No', 'Yes'), key=random_string)
-        if update_outliers == 'Yes':
-            with st.expander("Expand Outlier Data"):
-                lockdowns = ForecastStockPrice.handle_outliers(update_outliers, lockdowns)
+    def get_data_to_predict_future(historical_data, ticker):
+        # lockdowns = ForecastStockPrice.outlier_data()
+        lockdowns = ForecastStockPrice.outlier_data(ticker)
+        st.subheader("Outlier Data")
+        st.write(lockdowns)
 
         st.subheader("Forecast Stock Price")
         df_train = historical_data[['Date', 'Close']].rename(columns={"Date": "ds", "Close": "y"})
@@ -253,7 +220,7 @@ class ForecastStockPrice:
         historical = ForecastStockPrice.show_ticker_data(ticker, start_date, end_date)
         ForecastStockPrice.plot_raw_data(historical)
         changepoint_range, changepoint_prior_scale, lockdowns, df_train, n_days = ForecastStockPrice.get_data_to_predict_future(
-            historical)
+            historical, ticker)
         forecast, stock_mod = ForecastStockPrice.predict_future(changepoint_range, changepoint_prior_scale,
                                                                 lockdowns,
                                                                 df_train, n_days)
@@ -314,10 +281,10 @@ class ForecastStockPrice:
                              stocks.values()))
         return recommendations
 
-    def show_recommendations(self):
-        stocks = self.get_stocks_from_csv_data()
+    def show_recommendations(_self):
+        stocks = _self.get_stocks_from_csv_data()
         with st.spinner("Fetching recommendations..."):
-            recommendations = self.get_recommendations(stocks)
+            recommendations = _self.get_recommendations(stocks)
         company_names = list(stocks.keys())[:len(recommendations)]
         df = pd.DataFrame({
             'Company Name': company_names,

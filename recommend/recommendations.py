@@ -60,19 +60,19 @@ class Recommender:
         df['Decision RSI/SMA'] = np.where((df.Close > df.SMA200) & (df.RSI < 30), True, False)
 
     @st.cache_data
-    def apply_technicals(self):
-        prices = self.get_prices()
+    def apply_technicals(_self):
+        prices = _self.get_prices()
         for frame in prices:
             Recommender.macd_decision(frame)
             Recommender.golden_cross_decision(frame)
-            self.rsi_sma_decision(frame)
+            _self.rsi_sma_decision(frame)
         return prices
 
     @st.cache_data
-    def recommender(self):
+    def recommender(_self):
         signals = []
         indicators = ['Decision MACD', 'Decision GC', 'Decision RSI/SMA']
-        for symbol, frame in zip(self.get_tables().TABLE_NAME, self.apply_technicals()):
+        for symbol, frame in zip(_self.get_tables().TABLE_NAME, _self.apply_technicals()):
             if frame.empty is False:
                 for indicator in indicators:
                     if frame[indicator].iloc[-1]:
