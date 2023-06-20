@@ -1,6 +1,4 @@
 import io
-import random
-import string
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
@@ -33,9 +31,8 @@ st.markdown('<h1 style="text-align: center;">Stock Forecast App</h1>', unsafe_al
 class ForecastStockPrice:
 
     def __init__(self):
-        self.csv_file_path = 'data/ind_nifty500list.csv'
+        self.csv_file_path = 'ind_nifty500list.csv'
         self.date_string = "2015-01-01"
-        self.date_format = "%Y-%m-%d"
         self.START = datetime(2015, 1, 1).date()
         self.TODAY = date.today()
 
@@ -156,7 +153,8 @@ class ForecastStockPrice:
         # lockdowns = ForecastStockPrice.outlier_data()
         lockdowns = ForecastStockPrice.outlier_data(ticker)
         st.subheader("Outlier Data")
-        st.write(lockdowns)
+        lockdowns = lockdowns.rename_axis('S.No.')
+        st.dataframe(lockdowns, use_container_width=True)
 
         st.subheader("Forecast Stock Price")
         df_train = historical_data[['Date', 'Close']].rename(columns={"Date": "ds", "Close": "y"})
@@ -309,25 +307,25 @@ class ForecastStockPrice:
             else:
                 st.warning("No data available to download.")
 
-    def run_recommendations(self):
+    def run_recommendations(self, ticker):
         st.title("Recommendation")
         options = ['No', 'Yes']
         index = st.selectbox("Provide Index Name", indices)
         obj = rec.Recommender(index)
         db_update = st.selectbox("Do you want to Update Database?", options)
         if db_update == 'Yes':
-            with st.spinner("DB update in in progress..."):
-                obj.update_db()
-                st.success("Database updated successfully!")
-        elif db_update == 'No':
-            if st.button("Stock Recommendations Based On Indicators"):
-                st.subheader("Stock Recommendations")
-                with st.spinner(f"Fetching recommendation for {index}..."):
-                    signals = obj.recommender()
-                    df = pd.DataFrame({'Signals': signals})
-                    df = df.rename_axis("S.No")
-                    st.dataframe(df.style.set_properties(**{'text-align': 'center'}), use_container_width=True)
-        if st.button("Recommendations Based On Analysts Recommendations"):
+            if st.button("Update DB"):
+                with st.spinner("DB update in in progress..."):
+                    obj.update_db()
+                    st.success("Database updated successfully!")
+        col_gen_rec, col_stock_rec = st.columns(2)
+        if col_stock_rec.button("Stock Recommendations Based On Indicators"):
+            st.subheader("Stock Recommendations")
+            with st.spinner(f"Fetching recommendation for {index}..."):
+                signals = obj.recommender()
+                output = '\n'.join([f'{index + 1}. {item}' for index, item in enumerate(signals)])
+                st.info(output)
+        if col_gen_rec.button("Recommendations Based On Analysts Recommendations"):
             st.write("**General Recommendations**")
             self.show_recommendations()
 
@@ -338,7 +336,7 @@ class ForecastStockPrice:
         with tab2:
             self.diagnostics_data(stock_mod)
         with tab3:
-            self.run_recommendations()
+            self.run_recommendations(ticker)
         with tab4:
             ForecastStockPrice.fetch_stock_news(f"{ticker}E")
 

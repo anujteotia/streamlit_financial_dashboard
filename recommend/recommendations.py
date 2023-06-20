@@ -77,7 +77,7 @@ class Recommender:
                 for indicator in indicators:
                     if frame[indicator].iloc[-1]:
                         signals.append(f"{indicator} Buying signal for {symbol}")
-        return signals
+        return sorted(signals)
 
 
 if __name__ == "__main__":
