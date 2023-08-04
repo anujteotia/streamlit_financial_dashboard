@@ -1,9 +1,6 @@
-import io
-import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from datetime import datetime
-
 import pandas as pd
 import requests
 import streamlit as st
@@ -14,18 +11,11 @@ from prophet.diagnostics import cross_validation
 from prophet.diagnostics import performance_metrics
 from prophet.plot import plot_cross_validation_metric
 from prophet.plot import plot_plotly
-from yahooquery import Ticker
-
-sys.path.append('recommend')
-
-import recommendations as rec
 
 diagnostics_run = False
-# Page selection options
-page_tabs = ["**Forecast**", "**Diagnostics**", "**Recommendation**", "**Latest News**"]
-indices = ['Nifty-500', 'Nasdaq-100', 'AEX']
-st.set_page_config(page_title="Stock Forecasting App", layout="wide")
-st.markdown('<h1 style="text-align: center;">Stock Forecast App</h1>', unsafe_allow_html=True)
+page_tabs = ["**Forecast**", "**Recommendation**", "**Latest News**", "**Diagnostics**"]
+st.set_page_config(page_title="Stock Sense Analytics", layout="wide")
+st.markdown('<h1 style="text-align: center;">Stock Sense Analytics</h1>', unsafe_allow_html=True)
 
 
 class ForecastStockPrice:
@@ -87,6 +77,7 @@ class ForecastStockPrice:
         :param end_date:
         :return:
         """
+        # create ticker object
         tickerData = yf.Ticker(ticker)
         historical_data = tickerData.history(start=start_date, end=end_date)
         historical_data = historical_data.reset_index()
@@ -99,13 +90,10 @@ class ForecastStockPrice:
         string_rec = tickerData.info['recommendationKey']
         st.info(f"Recommendation: {string_rec}")
 
-        string_summary = tickerData.info['longBusinessSummary']
-        st.info(string_summary)
-
         # Ticker Data
         st.subheader('Ticker data')
         historical_data = historical_data.rename_axis('S.No.')
-        st.dataframe(historical_data.tail().style.set_properties(**{'text-align': 'center'}), use_container_width=True)
+        st.dataframe(historical_data.tail(), use_container_width=True)
         return historical_data
 
     @staticmethod
@@ -151,10 +139,6 @@ class ForecastStockPrice:
     @staticmethod
     def get_data_to_predict_future(historical_data, ticker):
         # lockdowns = ForecastStockPrice.outlier_data()
-        lockdowns = ForecastStockPrice.outlier_data(ticker)
-        st.subheader("Outlier Data")
-        lockdowns = lockdowns.rename_axis('S.No.')
-        st.dataframe(lockdowns, use_container_width=True)
 
         st.subheader("Forecast Stock Price")
         df_train = historical_data[['Date', 'Close']].rename(columns={"Date": "ds", "Close": "y"})
@@ -164,7 +148,7 @@ class ForecastStockPrice:
         n_days = col01.slider("**Days of prediction**", 1, 365, 180)
         changepoint_prior_scale = col11.slider("**Changepoint Prior Scale**", 0.05, 0.5, 0.2)
         changepoint_range = col12.slider("**Changepoint Range**", 0.8, 0.95, 0.95)
-        return changepoint_range, changepoint_prior_scale, lockdowns, df_train, n_days
+        return changepoint_range, changepoint_prior_scale, df_train, n_days
 
     @staticmethod
     @st.cache_data
@@ -217,13 +201,14 @@ class ForecastStockPrice:
         ticker, start_date, end_date = self.return_ticker_and_data(stocks)
         historical = ForecastStockPrice.show_ticker_data(ticker, start_date, end_date)
         ForecastStockPrice.plot_raw_data(historical)
-        changepoint_range, changepoint_prior_scale, lockdowns, df_train, n_days = ForecastStockPrice.get_data_to_predict_future(
+        lockdowns = ForecastStockPrice.outlier_data(ticker)
+        changepoint_range, changepoint_prior_scale, df_train, n_days = ForecastStockPrice.get_data_to_predict_future(
             historical, ticker)
         forecast, stock_mod = ForecastStockPrice.predict_future(changepoint_range, changepoint_prior_scale,
                                                                 lockdowns,
                                                                 df_train, n_days)
         ForecastStockPrice.plot_forcast_data(forecast, stock_mod)
-        return ticker, stock_mod
+        return ticker, stock_mod, historical
 
     @staticmethod
     @st.cache_data
@@ -272,73 +257,57 @@ class ForecastStockPrice:
 
     @staticmethod
     @st.cache_data
-    def get_recommendations(stocks):
+    def get_recommendation_key(symbol):
+        try:
+            financial_data = yf.Ticker(symbol).info
+            recommendation_key = financial_data.get('recommendationKey', None)
+            return recommendation_key
+        except Exception as e:
+            return str(e)
+
+    @st.cache_data
+    def get_recommendations(_self, stocks):
+        # Use ThreadPoolExecutor to fetch recommendation keys for multiple symbols concurrently
         with ThreadPoolExecutor() as executor:
-            recommendations = list(
-                executor.map(lambda symbol: Ticker(symbol).financial_data[symbol]['recommendationKey'],
-                             stocks.values()))
-        return recommendations
+            recommendations = list(executor.map(_self.get_recommendation_key, stocks.values()))
+
+        # Create a pandas DataFrame with symbols and their recommendations
+        data = {
+            'Company Name': stocks.keys(),
+            'Recommendation': recommendations
+        }
+        df = pd.DataFrame(data)
+
+        # Filter symbols with recommendation as 'Strong Buy' or 'Underperform'
+        filtered_df = df[df['Recommendation'].isin(['strong_buy', 'underperform'])]
+        return filtered_df
 
     def show_recommendations(_self):
         stocks = _self.get_stocks_from_csv_data()
         with st.spinner("Fetching recommendations..."):
             recommendations = _self.get_recommendations(stocks)
-        company_names = list(stocks.keys())[:len(recommendations)]
-        df = pd.DataFrame({
-            'Company Name': company_names,
-            'Recommendation': recommendations
-        })
-        df = df.rename_axis('S.No.')
-        st.dataframe(df.style.set_properties(**{'text-align': 'center'}), use_container_width=True)
-        if st.button("Download as Excel"):
-            if len(df) > 0:
-                output = io.BytesIO()
-                excel_writer = pd.ExcelWriter(output, engine='xlsxwriter')
-                df.to_excel(excel_writer, index=False, sheet_name='Recommendations')
-                excel_writer.close()
-                output.seek(0)
-                excel_data = output.getvalue()
-                st.download_button(
-                    label="Download Recommendations",
-                    data=excel_data,
-                    file_name="recommend.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-            else:
-                st.warning("No data available to download.")
+        # Display the filtered symbols and their recommendations using st.dataframe
+        if not recommendations.empty:
+            st.dataframe(recommendations, use_container_width=True)
+        else:
+            st.write("No symbols with 'Strong Buy' or 'Underperform' recommendation available.")
 
-    def run_recommendations(self, ticker):
+    def run_recommendations(self, df):
         st.title("Recommendation")
-        options = ['No', 'Yes']
-        index = st.selectbox("Provide Index Name", indices)
-        obj = rec.Recommender(index)
-        db_update = st.selectbox("Do you want to Update Database?", options)
-        if db_update == 'Yes':
-            if st.button("Update DB"):
-                with st.spinner("DB update in in progress..."):
-                    obj.update_db()
-                    st.success("Database updated successfully!")
-        col_gen_rec, col_stock_rec = st.columns(2)
-        if col_stock_rec.button("Stock Recommendations Based On Indicators"):
-            st.subheader("Stock Recommendations")
-            with st.spinner(f"Fetching recommendation for {index}..."):
-                signals = obj.recommender()
-                output = '\n'.join([f'{index + 1}. {item}' for index, item in enumerate(signals)])
-                st.info(output)
-        if col_gen_rec.button("Recommendations Based On Analysts Recommendations"):
-            st.write("**General Recommendations**")
-            self.show_recommendations()
+        # if st.button("Recommendations Based On Analysts Recommendations"):
+        st.write("**Symbols with recommendation as 'Strong Buy' or 'Underperform'**")
+        self.show_recommendations()
 
     def run_app(self):
         tab1, tab2, tab3, tab4 = st.tabs(page_tabs)
         with tab1:
-            ticker, stock_mod = self.run_forecast()
+            ticker, stock_mod, df = self.run_forecast()
         with tab2:
-            self.diagnostics_data(stock_mod)
+            self.run_recommendations(df)
         with tab3:
-            self.run_recommendations(ticker)
-        with tab4:
             ForecastStockPrice.fetch_stock_news(f"{ticker}E")
+        with tab4:
+            self.diagnostics_data(stock_mod)
 
 
 if __name__ == "__main__":
