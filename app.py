@@ -22,8 +22,7 @@ class ForecastStockPrice:
 
     def __init__(self):
         self.csv_file_path = 'ind_nifty500list.csv'
-        self.date_string = "2015-01-01"
-        self.START = datetime(2015, 1, 1).date()
+        self.START = datetime(2020, 1, 1).date()
         self.TODAY = date.today()
 
     @st.cache_data
