@@ -55,7 +55,7 @@ class ForecastStockPrice:
 
         :return:
         """
-        r = requests.get(f"https://api.stocktwits.com/api/2/streams/symbol/{ticker}.json")
+        r = requests.get(f"https://USERNAME:PASSWORD@api.stocktwits.com/api/2/streams/symbol/{ticker}.json")
         data = r.json()
         ticker_symbol_name = ticker.split(".")
         st.subheader(f"Latest news for {ticker_symbol_name[0]}")
