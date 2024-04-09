@@ -13,7 +13,7 @@ from prophet.plot import plot_cross_validation_metric
 from prophet.plot import plot_plotly
 
 diagnostics_run = False
-page_tabs = ["**Forecast**", "**Recommendation**", "**Latest News**", "**Diagnostics**"]
+page_tabs = ["**Forecast**", "**Recommendation**", "**Diagnostics**"]
 st.set_page_config(page_title="Stock Sense Analytics", layout="wide")
 st.markdown('<h1 style="text-align: center;">Stock Sense Analytics</h1>', unsafe_allow_html=True)
 
