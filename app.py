@@ -49,24 +49,6 @@ class ForecastStockPrice:
         return ticker, start_date, end_date
 
     @staticmethod
-    @st.cache_data
-    def fetch_stock_news(ticker):
-        """
-
-        :return:
-        """
-        r = requests.get(f"https://USERNAME:PASSWORD@api.stocktwits.com/api/2/streams/symbol/{ticker}.json")
-        data = r.json()
-        ticker_symbol_name = ticker.split(".")
-        st.subheader(f"Latest news for {ticker_symbol_name[0]}")
-        for message in data['messages']:
-            st.image(message['user']['avatar_url'])
-            st.write(message['user']['username'])
-            st.write(message['created_at'])
-            st.write(message['body'])
-            st.write("---")
-
-    @staticmethod
     @st.cache_resource
     def show_ticker_data(ticker, start_date, end_date):
         """
@@ -82,7 +64,8 @@ class ForecastStockPrice:
         historical_data = historical_data.reset_index()
         historical_data['Date'] = historical_data['Date'].dt.tz_localize(None)
 
-        # st.write(tickerData.info)
+        st.write(tickerData.info)
+        st.write(tickerData.news)
         string_name = tickerData.info['longName']
         st.header(f'**{string_name}**')
 
