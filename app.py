@@ -64,9 +64,10 @@ class ForecastStockPrice:
         historical_data = historical_data.reset_index()
         historical_data['Date'] = historical_data['Date'].dt.tz_localize(None)
 
-        st.write(tickerData.longBusinessSummary)
         string_name = tickerData.info['longName']
         st.header(f'**{string_name}**')
+        summary = tickerData.info['longBusinessSummary']
+        st.write(summary)
 
         string_rec = tickerData.info['recommendationKey']
         st.info(f"Recommendation: {string_rec}")
