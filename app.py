@@ -281,14 +281,12 @@ class ForecastStockPrice:
         self.show_recommendations()
 
     def run_app(self):
-        tab1, tab2, tab3, tab4 = st.tabs(page_tabs)
+        tab1, tab2, tab3 = st.tabs(page_tabs)
         with tab1:
             ticker, stock_mod, df = self.run_forecast()
         with tab2:
             self.run_recommendations(df)
         with tab3:
-            ForecastStockPrice.fetch_stock_news(f"{ticker}E")
-        with tab4:
             self.diagnostics_data(stock_mod)
 
 
